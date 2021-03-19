@@ -30,14 +30,49 @@ def handle_invalid_usage(error):
 def sitemap():
     return generate_sitemap(app)
 
-@app.route('/user', methods=['GET'])
+
+@app.route('/todos', methods=['GET'])
 def handle_hello():
+    todos = Todo.query.all()
+    response_body = list(map(lambda x: x.serialize(), todos))
+    return jsonify(response_body), 200 
 
-    response_body = {
-        "msg": "Hello, this is your GET /user response "
-    }
+@app.route('/todos', methods=['POST'])
+def handle_new():
+    todo = request.json
+    new_todo = Todo(label=todo["label"],done=todo["done"],user=todo["user"])
+    db.session.add(new_todo)
+    db.session.commit()
+    todos = Todo.query.all()
+    response_body = list(map(lambda x: x.serialize(), todos))
+    return jsonify(response_body), 200 
 
-    return jsonify(response_body), 200
+@app.route('/todos/<int:todo_id>', methods=['DELETE'])
+def handle_delete(todo_id):
+    body = request.json
+    todo = Todo.query.get(todo_id)
+    if todo is None:
+        raise APIException('User not found', status_code=404)
+    db.session.delete(todo)
+    db.session.commit()
+    todos = Todo.query.all()
+    response_body = list(map(lambda x: x.serialize(), todos))
+    return jsonify(response_body), 200 
+
+@app.route('/todos/<int:todo_id>', methods=['PUT'])
+def handle_edit(todo_id):
+    body = request.json
+    todo = Todo.query.get(todo_id)
+    if todo is None:
+        raise APIException('User not found', status_code=404)
+    if "label" in body:
+        todo.label = body["label"]
+    if "done" in body:
+        todo.done  = body["done"]
+    db.session.commit()
+    todos = Todo.query.all()
+    response_body = list(map(lambda x: x.serialize(), todos))
+    return jsonify(response_body), 200 
 
 # this only runs if `$ python src/main.py` is executed
 if __name__ == '__main__':
